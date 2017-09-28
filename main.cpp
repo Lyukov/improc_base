@@ -22,7 +22,8 @@ ImageBase<PixelType> Mirror( const ImageBase<PixelType> &image, const char axis 
             }
         }
     }
-    else if( axis == 'y' )
+    else if( axis == 'y' )  // Здесь между дублированием кода и проверкой условия на каждом пикселе
+                            // я выбрал дублирование
     {
         for( int j = 0; j < image.Height(); ++j )
         {
