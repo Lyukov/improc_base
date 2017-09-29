@@ -24,68 +24,85 @@ THE SOFTWARE.
 
 #pragma once
 
-#include <memory>
 #include <assert.h>
+#include <memory>
 #include "pixelformats.hpp"
 
-template<typename PixelType>
+template <typename PixelType>
 class ImageBase
 {
-private:
-	std::unique_ptr<PixelType[]> rawdata;
-	int width, height;
+   private:
+    std::unique_ptr<PixelType[]> rawdata;
+    int width, height;
 
-public:
-	inline ImageBase(int Width, int Height)
-	{
-		assert(Width > 0 && Height > 0);
+   public:
+    inline ImageBase( int Width, int Height )
+    {
+        assert( Width > 0 && Height > 0 );
 
-		this->width = Width;
-		this->height = Height;
-		this->rawdata.reset(new PixelType[Width * Height]);
-	}
+        this->width = Width;
+        this->height = Height;
+        this->rawdata.reset( new PixelType[Width * Height] );
+    }
 
-	// --- The code is needed for C++11 compatibility (for VS2013) ---
+    // --- The code is needed for C++11 compatibility (for VS2013) ---
 
-	ImageBase(const ImageBase&) = default;
-	ImageBase(ImageBase&&) = default;
+    ImageBase( const ImageBase& ) = default;
+    ImageBase( ImageBase&& ) = default;
 
-	ImageBase& operator = (const ImageBase&) = default;
-	ImageBase& operator = (ImageBase&&) = default;
+    ImageBase& operator=( const ImageBase& ) = default;
+    ImageBase& operator=( ImageBase&& ) = default;
 
-	// --- End of code region ---
+    // --- End of code region ---
 
-	inline PixelType operator() (int x, int y) const
-	{
-		assert(x >= 0 && x < width && y >= 0 && y < height);
-		return rawdata[y * width + x];
-	}
+    inline PixelType operator()( int x, int y ) const
+    {
+        if( x >= 0 && x < width && y >= 0 && y < height )
+        {
+            return rawdata[y * width + x];
+        }
+        // assert(x >= 0 && x < width && y >= 0 && y < height);
+        if( x < 0 )
+            x = -x;
+        else if( x >= width )
+            x = width - 1 - ( x - width );
+        if( y < 0 )
+            y = -y;
+        else
+            y = height - 1 - ( y - height );;
+        return (*this)( x, y );
+    }
 
-	inline PixelType& operator() (int x, int y)
-	{
-		assert(x >= 0 && x < width && y >= 0 && y < height);
-		return rawdata[y * width + x];
-	}
+    inline PixelType& operator()( int x, int y )
+    {
+       /* assert( x >= 0 && x < width && y >= 0 && y < height );
+        return rawdata[y * width + x];*/
+        if( x >= 0 && x < width && y >= 0 && y < height )
+        {
+            return rawdata[y * width + x];
+        }
+        if( x < 0 )
+            x = -x;
+        else if( x >= width )
+            x = width - 1 - ( x - width );
+        if( y < 0 )
+            y = -y;
+        else
+            y = height - 1 - ( y - height );;
+        return (*this)( x, y );
+    }
 
-	inline int Width() const
-	{
-		return width;
-	}
+    inline int Width() const { return width; }
+    inline int Height() const { return height; }
+    inline ImageBase<PixelType> Copy() const
+    {
+        ImageBase<PixelType> res( width, height );
 
-	inline int Height() const
-	{
-		return height;
-	}
+        if( rawdata )
+            memcpy( res.rawdata.get(), rawdata.get(), width * height * sizeof( PixelType ) );
 
-	inline ImageBase<PixelType> Copy() const
-	{
-		ImageBase<PixelType> res(width, height);
-
-		if (rawdata)
-			memcpy(res.rawdata.get(), rawdata.get(), width * height * sizeof(PixelType));
-
-		return res;
-	}
+        return res;
+    }
 };
 
 typedef ImageBase<unsigned char> GrayscaleByteImage;

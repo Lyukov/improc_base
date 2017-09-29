@@ -1,10 +1,18 @@
 #include <string.h>
+#include <algorithm>
+#include <vector>
 #include "imageformats.hpp"
 #include "imageio.hpp"
 
 float ToGray( ColorFloatPixel pixel )
 {
     return pixel.b * 0.114f + pixel.g * 0.587f + pixel.r * 0.299f;
+}
+
+template <typename T>
+inline T sqr( const T &x )
+{
+    return x * x;
 }
 
 template <typename PixelType>
@@ -63,13 +71,51 @@ ImageBase<PixelType> Rotate( const ImageBase<PixelType> &image,
     return result;
 }
 
+template <typename PixelType>
+ImageBase<PixelType> MedianFilter( const ImageBase<PixelType> &image, int radius = 1 )
+{
+    assert( radius > 0 );
+    ImageBase<PixelType> result = ImageBase<PixelType>( image.Width(), image.Height() );
+    std::vector<PixelType> window( sqr( 2 * radius + 1 ) );
+    for( int j = 0; j < result.Height(); ++j )
+    {
+        for( int i = 0; i < result.Width(); ++i )
+        {
+            window.clear();
+            for( int k = -radius; k < radius + 1; ++k )
+            {
+                for( int l = -radius; l < radius + 1; ++l )
+                {
+                    window.push_back( image( i + l, j + k ) );
+                }
+            }
+            PixelType pixel;
+            std::sort( window.begin(), window.end(),
+                       []( const PixelType &p1, const PixelType &p2 ) { return p1.r < p2.r; } );
+            pixel.r = window.at( window.size() / 2 + 1 ).r;
+            std::sort( window.begin(), window.end(),
+                       []( const PixelType &p1, const PixelType &p2 ) { return p1.g < p2.g; } );
+            pixel.g = window.at( window.size() / 2 + 1 ).g;
+            std::sort( window.begin(), window.end(),
+                       []( const PixelType &p1, const PixelType &p2 ) { return p1.b < p2.b; } );
+            pixel.b = window.at( window.size() / 2 + 1 ).b;
+            result( i, j ) = pixel;
+        }
+    }
+    return result;
+}
+
 int main( int argc, char **argv )
 {
     /* if( !strcmp( argv[1], "mirror" ) )
      {
      }*/
     ColorByteImage image = ImageIO::FileToColorByteImage( argv[1] );
-    ColorByteImage image1 = Mirror(image, 'y');
-    ImageIO::ImageToFile(image1, "qweer.bmp");
+    ColorByteImage image1 = MedianFilter(image, 1);
+    ImageIO::ImageToFile( image1, "lena1.bmp" );
+    image1 = MedianFilter(image, 2);
+    ImageIO::ImageToFile( image1, "lena2.bmp" );
+    image1 = MedianFilter(image, 3);
+    ImageIO::ImageToFile( image1, "lena3.bmp" );
     return 0;
 }
