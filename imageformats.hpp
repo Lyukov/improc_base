@@ -69,14 +69,13 @@ class ImageBase
         if( y < 0 )
             y = -y;
         else
-            y = height - 1 - ( y - height );;
-        return (*this)( x, y );
+            y = height - 1 - ( y - height );
+        ;
+        return ( *this )( x, y );
     }
 
     inline PixelType& operator()( int x, int y )
     {
-       /* assert( x >= 0 && x < width && y >= 0 && y < height );
-        return rawdata[y * width + x];*/
         if( x >= 0 && x < width && y >= 0 && y < height )
         {
             return rawdata[y * width + x];
@@ -88,8 +87,21 @@ class ImageBase
         if( y < 0 )
             y = -y;
         else
-            y = height - 1 - ( y - height );;
-        return (*this)( x, y );
+            y = height - 1 - ( y - height );
+        ;
+        return ( *this )( x, y );
+    }
+
+    inline ImageBase<PixelType>& operator=( PixelType* data )
+    {
+        for( int j = 0; j < height; ++j )
+        {
+            for( int i = 0; i < width; ++i )
+            {
+                rawdata[j * width + i] = data[j * width + i];
+            }
+        }
+        return *this;
     }
 
     inline int Width() const { return width; }

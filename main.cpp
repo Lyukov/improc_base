@@ -133,17 +133,11 @@ ImageBase<PixelType> Convolution( const ImageBase<PixelType> &image,
 int main( int argc, char **argv )
 {
     ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[1] );
+    float kerdata[9] = {-1.f, -2.f, -1.f,  //
+                        0.f,  0.f,  0.f,   //
+                        1.f,  2.f,  1.f};
     GrayscaleFloatImage kernel( 3, 3 );
-    kernel( 0, 0 ) = -1.f;
-    kernel( 1, 0 ) = -2.f;
-    kernel( 2, 0 ) = -1.f;
-    kernel( 0, 1 ) = 0.f;
-    kernel( 1, 1 ) = 0.f;
-    kernel( 2, 1 ) = 0.f;
-    kernel( 0, 2 ) = 1.f;
-    kernel( 1, 2 ) = 2.f;
-    kernel( 2, 2 ) = 1.f;
-    ImageIO::ImageToFile( kernel, "kernel.bmp" );
+    kernel = kerdata;
     ColorFloatImage image1 = Convolution( image, kernel );
     ImageIO::ImageToFile( image1, argv[2] );
     return 0;
