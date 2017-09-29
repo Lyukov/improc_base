@@ -105,17 +105,46 @@ ImageBase<PixelType> MedianFilter( const ImageBase<PixelType> &image, int radius
     return result;
 }
 
+template <typename PixelType, typename KernelType>
+ImageBase<PixelType> Convolution( const ImageBase<PixelType> &image,
+                                  const ImageBase<KernelType> &kernel )
+{
+    ImageBase<PixelType> result( image.Width(), image.Height() );
+    int kerw = kernel.Width();
+    int kerh = kernel.Height();
+    for( int i = 0; i < result.Width(); ++i )
+    {
+        for( int j = 0; j < result.Height(); ++j )
+        {
+            PixelType res;
+            for( int l = -kerh / 2; l <= kerh / 2; ++l )
+            {
+                for( int k = -kerw / 2; k <= kerw / 2; ++k )
+                {
+                    res += image( i - k, j - l ) * kernel( k + kerw / 2, l + kerw / 2 );
+                }
+            }
+            result( i, j ) = res;
+        }
+    }
+    return result;
+}
+
 int main( int argc, char **argv )
 {
-    /* if( !strcmp( argv[1], "mirror" ) )
-     {
-     }*/
-    ColorByteImage image = ImageIO::FileToColorByteImage( argv[1] );
-    ColorByteImage image1 = MedianFilter(image, 1);
-    ImageIO::ImageToFile( image1, "lena1.bmp" );
-    image1 = MedianFilter(image, 2);
-    ImageIO::ImageToFile( image1, "lena2.bmp" );
-    image1 = MedianFilter(image, 3);
-    ImageIO::ImageToFile( image1, "lena3.bmp" );
+    ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[1] );
+    GrayscaleFloatImage kernel( 3, 3 );
+    kernel( 0, 0 ) = -1.f;
+    kernel( 1, 0 ) = -2.f;
+    kernel( 2, 0 ) = -1.f;
+    kernel( 0, 1 ) = 0.f;
+    kernel( 1, 1 ) = 0.f;
+    kernel( 2, 1 ) = 0.f;
+    kernel( 0, 2 ) = 1.f;
+    kernel( 1, 2 ) = 2.f;
+    kernel( 2, 2 ) = 1.f;
+    ImageIO::ImageToFile( kernel, "kernel.bmp" );
+    ColorFloatImage image1 = Convolution( image, kernel );
+    ImageIO::ImageToFile( image1, argv[2] );
     return 0;
 }
