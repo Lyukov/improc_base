@@ -12,25 +12,12 @@ ImageBase<PixelType> Mirror( const ImageBase<PixelType> &image, const char axis 
 {
     assert( axis == 'x' || axis == 'y' );
     ImageBase<PixelType> result = ImageBase<PixelType>( image.Width(), image.Height() );
-    if( axis == 'x' )
+    for( int j = 0; j < image.Height(); ++j )
     {
-        for( int j = 0; j < image.Height(); ++j )
+        for( int i = 0; i < image.Width(); ++i )
         {
-            for( int i = 0; i < image.Width(); ++i )
-            {
-                result( i, j ) = image( image.Width() - 1 - i, j );
-            }
-        }
-    }
-    else if( axis == 'y' )  // Здесь между дублированием кода и проверкой условия на каждом пикселе
-                            // я выбрал дублирование
-    {
-        for( int j = 0; j < image.Height(); ++j )
-        {
-            for( int i = 0; i < image.Width(); ++i )
-            {
-                result( i, j ) = image( i, image.Height() - 1 - j );
-            }
+            result( i, j ) = ( axis == 'x' ) ? image( image.Width() - 1 - i, j ) :
+                                               image( i, image.Height() - 1 - j );
         }
     }
     return result;
@@ -46,52 +33,43 @@ ImageBase<PixelType> Rotate( const ImageBase<PixelType> &image,
         angle = 360 - angle;
     }
     angle %= 360;
-    switch( angle )
+    if( angle == 0 )
     {
-    case 0:
         return image.Copy();
-    case 90:
+    }
+    int width = ( angle == 0 || angle == 180 ) ? image.Width() : image.Height();
+    int height = ( angle == 0 || angle == 180 ) ? image.Height() : image.Width();
+    ImageBase<PixelType> result = ImageBase<PixelType>( width, height );
+    for( int j = 0; j < height; ++j )
     {
-        ImageBase<PixelType> result = ImageBase<PixelType>( image.Height(), image.Width() );
-        for( int j = 0; j < image.Height(); ++j )
+        for( int i = 0; i < width; ++i )
         {
-            for( int i = 0; i < image.Width(); ++i )
+            PixelType pixel;
+            switch( angle )
             {
-                result( image.Height() - j - 1, i ) = image( i, j );
+            case 90:
+                pixel = image( j, width - i - 1 );
+                break;
+            case 180:
+                pixel = image( width - i - 1, height - j - 1 );
+                break;
+            case 270:
+                pixel = image( height - j - 1, i );
+                break;
             }
+            result( i, j ) = pixel;
         }
-        return result;
     }
-    case 180:
-    {
-        ImageBase<PixelType> result = ImageBase<PixelType>( image.Width(), image.Height() );
-        for( int j = 0; j < image.Height(); ++j )
-        {
-            for( int i = 0; i < image.Width(); ++i )
-            {
-                result( image.Width() - i - 1, image.Height() - j - 1 ) = image( i, j );
-            }
-        }
-        return result;
-    }
-    case 270:
-    {
-        ImageBase<PixelType> result = ImageBase<PixelType>( image.Height(), image.Width() );
-        for( int j = 0; j < image.Height(); ++j )
-        {
-            for( int i = 0; i < image.Width(); ++i )
-            {
-                result( j, image.Width() - i - 1 ) = image( i, j );
-            }
-        }
-        return result;
-    }
-    }
-    return image.Copy();
+    return result;
 }
 
 int main( int argc, char **argv )
 {
-    
+    /* if( !strcmp( argv[1], "mirror" ) )
+     {
+     }*/
+    ColorByteImage image = ImageIO::FileToColorByteImage( argv[1] );
+    ColorByteImage image1 = Mirror(image, 'y');
+    ImageIO::ImageToFile(image1, "qweer.bmp");
     return 0;
 }
