@@ -16,7 +16,7 @@ inline T sqr( const T &x )
 }
 
 template <typename PixelType>
-ImageBase<PixelType> Mirror( const ImageBase<PixelType> &image, const char axis = 'x' )
+ImageBase<PixelType> Mirror( const ImageBase<PixelType> &image, char axis = 'x' )
 {
     assert( axis == 'x' || axis == 'y' );
     ImageBase<PixelType> result = ImageBase<PixelType>( image.Width(), image.Height() );
@@ -130,15 +130,43 @@ ImageBase<PixelType> Convolution( const ImageBase<PixelType> &image,
     return result;
 }
 
+template <typename PixelType>
+ImageBase<PixelType> SobelFilter( const ImageBase<PixelType> &image, char axis = 'x' )
+{
+    assert( axis == 'x' || axis == 'y' );
+    GrayscaleFloatImage kernel( 3, 3 );
+    if( axis == 'x' )
+    {
+        float kerdata[9] = {-1.f, 0.f, 1.f,  //
+                            -2.f, 0.f, 2.f,  //
+                            -1.f, 0.f, 1.f};
+        kernel = kerdata;
+    }
+    else if( axis == 'y' )
+    {
+        float kerdata[9] = {-1.f, -2.f, -1.f,  //
+                            0.f,  0.f,  0.f,   //
+                            1.f,  2.f,  1.f};
+        kernel = kerdata;
+    }
+    ImageBase<PixelType> result = Convolution( image, kernel );
+    PixelType pix( 128 );
+    for( int j = 0; j < result.Height(); ++j )
+    {
+        for( int i = 0; i < result.Width(); ++i )
+        {
+            result( i, j ) += pix;
+        }
+    }
+    return result;
+}
+
 int main( int argc, char **argv )
 {
     ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[1] );
-    float kerdata[9] = {-1.f, -2.f, -1.f,  //
-                        0.f,  0.f,  0.f,   //
-                        1.f,  2.f,  1.f};
-    GrayscaleFloatImage kernel( 3, 3 );
-    kernel = kerdata;
-    ColorFloatImage image1 = Convolution( image, kernel );
-    ImageIO::ImageToFile( image1, argv[2] );
+    ColorFloatImage imagex = SobelFilter( image, 'x' );
+    ColorFloatImage imagey = SobelFilter( image, 'y' );
+    ImageIO::ImageToFile( imagex, "sobelx.bmp" );
+    ImageIO::ImageToFile( imagey, "sobely.bmp" );
     return 0;
 }

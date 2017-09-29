@@ -31,6 +31,7 @@ struct ColorBytePixel
     unsigned char b, g, r, a;
 
     inline ColorBytePixel() : b( 0 ), g( 0 ), r( 0 ), a( 0 ) {}
+    inline ColorBytePixel( unsigned char c ) : b( c ), g( c ), r( c ), a( 0 ) {}
     inline ColorBytePixel( unsigned char b, unsigned char g, unsigned char r, unsigned char a = 0 )
         : b( b ), g( g ), r( r ), a( a )
     {
@@ -43,6 +44,7 @@ struct ColorFloatPixel
     float b, g, r, a;
 
     inline ColorFloatPixel() : b( 0.0f ), g( 0.0f ), r( 0.0f ), a( 0.0f ) {}
+    inline ColorFloatPixel( float c ) : b( c ), g( c ), r( c ), a( 0.0f ) {}
     inline ColorFloatPixel( float b, float g, float r, float a = 0.0f )
         : b( b ), g( g ), r( r ), a( a )
     {
