@@ -1,18 +1,26 @@
+#define _USE_MATH_DEFINES
+
+#include <math.h>
 #include <string.h>
 #include <algorithm>
 #include <vector>
 #include "imageformats.hpp"
 #include "imageio.hpp"
 
-float ToGray( ColorFloatPixel pixel )
-{
-    return pixel.b * 0.114f + pixel.g * 0.587f + pixel.r * 0.299f;
-}
-
 template <typename T>
 inline T sqr( const T &x )
 {
     return x * x;
+}
+
+float Gauss( float x, float y, float sigma )
+{
+    return exp( -( sqr( x ) + sqr( y ) ) / ( 2.f * sqr( sigma ) ) ) / ( 2.f * M_PI * sqr( sigma ) );
+}
+
+float ToGray( ColorFloatPixel pixel )
+{
+    return pixel.b * 0.114f + pixel.g * 0.587f + pixel.r * 0.299f;
 }
 
 template <typename PixelType>
@@ -161,12 +169,25 @@ ImageBase<PixelType> SobelFilter( const ImageBase<PixelType> &image, char axis =
     return result;
 }
 
+template <typename PixelType>
+ImageBase<PixelType> GaussianFilter( const ImageBase<PixelType> &image, float sigma )
+{
+    int win_size = ceil( sigma * 5.f );
+    GrayscaleFloatImage kernel( win_size * 2 + 1, win_size * 2 + 1 );
+    for( int j = 0; j < kernel.Height(); ++j )
+    {
+        for( int i = 0; i < kernel.Width(); ++i )
+        {
+            kernel( i, j ) = Gauss( i - win_size, j - win_size, sigma );
+        }
+    }
+    return Convolution( image, kernel );
+}
+
 int main( int argc, char **argv )
 {
     ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[1] );
-    ColorFloatImage imagex = SobelFilter( image, 'x' );
-    ColorFloatImage imagey = SobelFilter( image, 'y' );
-    ImageIO::ImageToFile( imagex, "sobelx.bmp" );
-    ImageIO::ImageToFile( imagey, "sobely.bmp" );
+    ColorFloatImage image5 = GaussianFilter( image, 5.f );
+    ImageIO::ImageToFile( image5, "gauss5.bmp" );
     return 0;
 }
