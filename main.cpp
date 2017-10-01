@@ -120,11 +120,11 @@ ImageBase<PixelType> Convolution( const ImageBase<PixelType> &image,
     ImageBase<PixelType> result( image.Width(), image.Height() );
     int kerw = kernel.Width();
     int kerh = kernel.Height();
-    for( int i = 0; i < result.Width(); ++i )
+    for( int j = 0; j < result.Height(); ++j )
     {
-        for( int j = 0; j < result.Height(); ++j )
+        for( int i = 0; i < result.Width(); ++i )
         {
-            PixelType res;
+            PixelType res( 0 );
             for( int l = -kerh / 2; l <= kerh / 2; ++l )
             {
                 for( int k = -kerw / 2; k <= kerw / 2; ++k )
@@ -172,7 +172,7 @@ ImageBase<PixelType> SobelFilter( const ImageBase<PixelType> &image, char axis =
 template <typename PixelType>
 ImageBase<PixelType> GaussianFilter( const ImageBase<PixelType> &image, float sigma )
 {
-    int win_size = ceil( sigma * 5.f );
+    int win_size = ceil( sigma * 4.f );
     GrayscaleFloatImage kernel( win_size * 2 + 1, win_size * 2 + 1 );
     for( int j = 0; j < kernel.Height(); ++j )
     {
@@ -187,7 +187,7 @@ ImageBase<PixelType> GaussianFilter( const ImageBase<PixelType> &image, float si
 template <typename PixelType>
 ImageBase<PixelType> Gradient( const ImageBase<PixelType> &image, float sigma )
 {
-    int win_size = ceil( sigma * 5.f );
+    int win_size = ceil( sigma * 4.f );
     GrayscaleFloatImage kernelDx( win_size * 2 + 1, win_size * 2 + 1 );
     for( int j = 0; j < kernelDx.Height(); ++j )
     {
@@ -204,9 +204,15 @@ ImageBase<PixelType> Gradient( const ImageBase<PixelType> &image, float sigma )
     {
         for( int i = 0; i < result.Width(); ++i )
         {
-            result( i, j ).r = sqrt( sqr( image_dx( i, j ).r ) + sqr( image_dy( i, j ).r ) ) * 4;
-            result( i, j ).g = sqrt( sqr( image_dx( i, j ).g ) + sqr( image_dy( i, j ).g ) ) * 4;
-            result( i, j ).b = sqrt( sqr( image_dx( i, j ).b ) + sqr( image_dy( i, j ).b ) ) * 4;
+            result( i, j ) = sqrt( sqr( image_dx( i, j ) ) + sqr( image_dy( i, j ) ) ) * 4;
+            image_dx(i,j) *= 4;
+            image_dy(i,j) *= 4;
+            //  result( i, j ).r = sqrt( sqr( image_dx( i, j ).r ) + sqr( image_dy( i, j ).r ) ) *
+            //  4;
+            //  result( i, j ).g = sqrt( sqr( image_dx( i, j ).g ) + sqr( image_dy( i, j ).g ) ) *
+            //  4;
+            //  result( i, j ).b = sqrt( sqr( image_dx( i, j ).b ) + sqr( image_dy( i, j ).b ) ) *
+            //  4;
         }
     }
     ImageIO::ImageToFile( image_dx, "gradx.bmp" );
@@ -216,16 +222,16 @@ ImageBase<PixelType> Gradient( const ImageBase<PixelType> &image, float sigma )
 
 int main( int argc, char **argv )
 {
-    ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[1] );
-    ColorFloatImage image5 = Gradient( image, 1.f );
- /*   for( int j = 0; j < image5.Height(); j += 25 )
-    {
-        for( int i = 0; i < image5.Width(); i += 60 )
-        {
-            printf( "%f ", image5( i, j ) );
-        }
-        printf( "\n" );
-    }*/
+    GrayscaleFloatImage image = ImageIO::FileToGrayscaleFloatImage( argv[1] );
+    GrayscaleFloatImage image5 = Gradient( image, 1.f );
+    /*   for( int j = 0; j < image5.Height(); j += 25 )
+       {
+           for( int i = 0; i < image5.Width(); i += 60 )
+           {
+               printf( "%f ", image5( i, j ) );
+           }
+           printf( "\n" );
+       }*/
     ImageIO::ImageToFile( image5, "grad.bmp" );
     return 0;
 }
