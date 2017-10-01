@@ -1,6 +1,7 @@
 #define _USE_MATH_DEFINES
 
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 #include <algorithm>
 #include <vector>
@@ -245,8 +246,64 @@ ImageBase<PixelType> Gradient( const ImageBase<PixelType> &image, float sigma )
 
 int main( int argc, char **argv )
 {
-    ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[1] );
-    ColorFloatImage image5 = GaussianFilter( image, 0.5f, 2.f );
-    ImageIO::ImageToFile( image5, argv[2] );
+    if( !strcmp( argv[1], "mirror" ) )
+    {
+        ColorByteImage image = ImageIO::FileToColorByteImage( argv[3] );
+        ImageIO::ImageToFile( Mirror( image, argv[2][0] ), argv[4] );
+    }
+    else if( !strcmp( argv[1], "rotate" ) )
+    {
+        bool direction;
+        if( !strcmp( argv[2], "cw" ) )
+            direction = true;
+        else if( !strcmp( argv[2], "ccw" ) )
+            direction = false;
+        int angle = atoi( argv[3] );
+        ColorByteImage image = ImageIO::FileToColorByteImage( argv[4] );
+        ImageIO::ImageToFile( Rotate( image, angle, direction ), argv[5] );
+    }
+    else if( !strcmp( argv[1], "sobel" ) )
+    {
+        ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[3] );
+        ImageIO::ImageToFile( SobelFilter( image, argv[2][0] ), argv[4] );
+    }
+    else if( !strcmp( argv[1], "median" ) )
+    {
+        int radius = atoi( argv[2] );
+        ColorByteImage image = ImageIO::FileToColorByteImage( argv[3] );
+        ImageIO::ImageToFile( MedianFilter( image, radius ), argv[4] );
+    }
+    else if( !strcmp( argv[1], "gauss" ) )
+    {
+        float sigma = atof( argv[2] );
+        float gamma = atof( argv[3] );
+        ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[4] );
+        ImageIO::ImageToFile( GaussianFilter( image, sigma, gamma ), argv[5] );
+    }
+    else if( !strcmp( argv[1], "gradient" ) )
+    {
+        float sigma = atof( argv[2] );
+
+        ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[3] );
+        GrayscaleFloatImage result = ToGrayscale( Gradient( image, sigma ) );
+        if( argc > 5 )
+        {
+            float x = atof( argv[5] );
+            for( int j = 0; j < result.Height(); ++j )
+            {
+                for( int i = 0; i < result.Width(); ++i )
+                {
+                    result( i, j ) *= x;
+                }
+            }
+        }
+        ImageIO::ImageToFile( result, argv[4] );
+    }
+    else if( !strcmp( argv[1], "gamma" ) )
+    {
+        float gamma = atof( argv[2] );
+        ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[3] );
+        ImageIO::ImageToFile( GammaCorrection( image, gamma ), argv[4] );
+    }
     return 0;
 }
