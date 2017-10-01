@@ -18,9 +18,9 @@ float Gauss( float x, float y, float sigma )
     return exp( -( sqr( x ) + sqr( y ) ) / ( 2.f * sqr( sigma ) ) ) / ( 2.f * M_PI * sqr( sigma ) );
 }
 
-float ToGray( ColorFloatPixel pixel )
+inline float GaussDx( float x, float y, float sigma )
 {
-    return pixel.b * 0.114f + pixel.g * 0.587f + pixel.r * 0.299f;
+    return Gauss( x, y, sigma ) * ( -x / sqr( sigma ) );
 }
 
 template <typename PixelType>
@@ -184,10 +184,48 @@ ImageBase<PixelType> GaussianFilter( const ImageBase<PixelType> &image, float si
     return Convolution( image, kernel );
 }
 
+template <typename PixelType>
+ImageBase<PixelType> Gradient( const ImageBase<PixelType> &image, float sigma )
+{
+    int win_size = ceil( sigma * 5.f );
+    GrayscaleFloatImage kernelDx( win_size * 2 + 1, win_size * 2 + 1 );
+    for( int j = 0; j < kernelDx.Height(); ++j )
+    {
+        for( int i = 0; i < kernelDx.Width(); ++i )
+        {
+            kernelDx( i, j ) = GaussDx( i - win_size, j - win_size, sigma );
+        }
+    }
+    GrayscaleFloatImage kernelDy = Mirror( Rotate( kernelDx, 90, true ), 'x' );  // Transpose
+    ImageBase<PixelType> image_dx = Convolution( image, kernelDx );
+    ImageBase<PixelType> image_dy = Convolution( image, kernelDy );
+    ImageBase<PixelType> result( image.Width(), image.Height() );
+    for( int j = 0; j < result.Height(); ++j )
+    {
+        for( int i = 0; i < result.Width(); ++i )
+        {
+            result( i, j ).r = sqrt( sqr( image_dx( i, j ).r ) + sqr( image_dy( i, j ).r ) ) * 4;
+            result( i, j ).g = sqrt( sqr( image_dx( i, j ).g ) + sqr( image_dy( i, j ).g ) ) * 4;
+            result( i, j ).b = sqrt( sqr( image_dx( i, j ).b ) + sqr( image_dy( i, j ).b ) ) * 4;
+        }
+    }
+    ImageIO::ImageToFile( image_dx, "gradx.bmp" );
+    ImageIO::ImageToFile( image_dy, "grady.bmp" );
+    return result;
+}
+
 int main( int argc, char **argv )
 {
     ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[1] );
-    ColorFloatImage image5 = GaussianFilter( image, 5.f );
-    ImageIO::ImageToFile( image5, "gauss5.bmp" );
+    ColorFloatImage image5 = Gradient( image, 1.f );
+ /*   for( int j = 0; j < image5.Height(); j += 25 )
+    {
+        for( int i = 0; i < image5.Width(); i += 60 )
+        {
+            printf( "%f ", image5( i, j ) );
+        }
+        printf( "\n" );
+    }*/
+    ImageIO::ImageToFile( image5, "grad.bmp" );
     return 0;
 }

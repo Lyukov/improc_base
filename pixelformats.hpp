@@ -63,6 +63,10 @@ struct ColorFloatPixel
     {
         return ColorFloatPixel( b + other.b, g + other.g, r + other.r, a + other.a );
     }
+    inline ColorFloatPixel operator*( const ColorFloatPixel &other ) const
+    {
+        return ColorFloatPixel( b * other.b, g * other.g, r * other.r, a * other.a );
+    }
 
     inline ColorFloatPixel operator*( float q ) const
     {
