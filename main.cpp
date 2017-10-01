@@ -171,14 +171,7 @@ ImageBase<PixelType> SobelFilter( const ImageBase<PixelType> &image, char axis =
         kernel = kerdata;
     }
     ImageBase<PixelType> result = Convolution( image, kernel );
-    PixelType pix( 128 );
-    for( int j = 0; j < result.Height(); ++j )
-    {
-        for( int i = 0; i < result.Width(); ++i )
-        {
-            result( i, j ) += pix;
-        }
-    }
+    result.for_each_pixel( []( PixelType p ) { return p + PixelType(128); } );
     return result;
 }
 
@@ -227,8 +220,7 @@ ImageBase<PixelType> Gradient( const ImageBase<PixelType> &image, float sigma )
 int main( int argc, char **argv )
 {
     ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[1] );
-    GrayscaleFloatImage image5 = ToGrayscale( Gradient( image, 1.f ) );
-    image5.for_each_pixel( []( float x ) { return 4.f * x; } );
+    GrayscaleFloatImage image5 = ToGrayscale( SobelFilter( image, 'x' ) );
     ImageIO::ImageToFile( image5, argv[2] );
     return 0;
 }
