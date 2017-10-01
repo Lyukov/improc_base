@@ -171,12 +171,31 @@ ImageBase<PixelType> SobelFilter( const ImageBase<PixelType> &image, char axis =
         kernel = kerdata;
     }
     ImageBase<PixelType> result = Convolution( image, kernel );
-    result.for_each_pixel( []( PixelType p ) { return p + PixelType(128); } );
+    result.for_each_pixel( []( PixelType p ) { return p + PixelType( 128 ); } );
     return result;
 }
 
 template <typename PixelType>
-ImageBase<PixelType> GaussianFilter( const ImageBase<PixelType> &image, float sigma )
+ImageBase<PixelType> GammaCorrection( const ImageBase<PixelType> &image, float gamma = 1.f )
+{
+    ImageBase<PixelType> result( image.Width(), image.Height() );
+    for( int j = 0; j < result.Height(); ++j )
+    {
+        for( int i = 0; i < result.Width(); ++i )
+        {
+            PixelType gamma_px( gamma );
+            result( i, j ) = apply(
+                []( float x, float gamma ) -> float { return pow( ( x / 255.f ), gamma ) * 255.f; },
+                image( i, j ), gamma_px );
+        }
+    }
+    return result;
+}
+
+template <typename PixelType>
+ImageBase<PixelType> GaussianFilter( const ImageBase<PixelType> &image,
+                                     float sigma = 1.f,
+                                     float gamma = 1.f )
 {
     int win_size = ceil( sigma * 4.f );
     GrayscaleFloatImage kernel( win_size * 2 + 1, win_size * 2 + 1 );
@@ -187,7 +206,14 @@ ImageBase<PixelType> GaussianFilter( const ImageBase<PixelType> &image, float si
             kernel( i, j ) = Gauss( i - win_size, j - win_size, sigma );
         }
     }
-    return Convolution( image, kernel );
+    if( gamma == 1.f )
+    {
+        return Convolution( image, kernel );
+    }
+    else
+    {
+        return GammaCorrection( Convolution( image, kernel ), gamma );
+    }
 }
 
 template <typename PixelType>
@@ -220,7 +246,7 @@ ImageBase<PixelType> Gradient( const ImageBase<PixelType> &image, float sigma )
 int main( int argc, char **argv )
 {
     ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[1] );
-    GrayscaleFloatImage image5 = ToGrayscale( SobelFilter( image, 'x' ) );
+    ColorFloatImage image5 = GaussianFilter( image, 0.5f, 2.f );
     ImageIO::ImageToFile( image5, argv[2] );
     return 0;
 }
