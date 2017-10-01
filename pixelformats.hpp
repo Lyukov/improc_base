@@ -72,11 +72,23 @@ struct ColorFloatPixel
     {
         return ColorFloatPixel( b * q, g * q, r * q, a * q );
     }
+    float toGray() const { return b * 0.114f + g * 0.587f + r * 0.299f; }
 };
+
 
 inline ColorFloatPixel operator*( float q, const ColorFloatPixel &p )
 {
     return ColorFloatPixel( p.b * q, p.g * q, p.r * q, p.a * q );
 }
 
+inline ColorFloatPixel apply( float ( *f )( float ), ColorFloatPixel p )
+{
+    return ColorFloatPixel( f( p.b ), f( p.g ), f( p.r ) );
+}
+inline ColorFloatPixel apply( float ( *f )( float, float ), ColorFloatPixel p1, ColorFloatPixel p2 )
+{
+    return ColorFloatPixel( f( p1.b, p2.b ), f( p1.g, p2.g ), f( p1.r, p2.r ) );
+}
+inline float apply( float ( *f )( float ), float p ) { return f( p ); }
+inline float apply( float ( *f )( float, float ), float p1, float p2 ) { return f( p1, p2 ); }
 #pragma pack( pop )

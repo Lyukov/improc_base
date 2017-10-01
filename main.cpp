@@ -23,6 +23,19 @@ inline float GaussDx( float x, float y, float sigma )
     return Gauss( x, y, sigma ) * ( -x / sqr( sigma ) );
 }
 
+GrayscaleFloatImage ToGrayscale( const ColorFloatImage &image )
+{
+    GrayscaleFloatImage result( image.Width(), image.Height() );
+    for( int j = 0; j < result.Height(); ++j )
+    {
+        for( int i = 0; i < result.Width(); ++i )
+        {
+            result( i, j ) = image( i, j ).toGray();
+        }
+    }
+    return result;
+}
+
 template <typename PixelType>
 ImageBase<PixelType> Mirror( const ImageBase<PixelType> &image, char axis = 'x' )
 {
@@ -204,34 +217,18 @@ ImageBase<PixelType> Gradient( const ImageBase<PixelType> &image, float sigma )
     {
         for( int i = 0; i < result.Width(); ++i )
         {
-            result( i, j ) = sqrt( sqr( image_dx( i, j ) ) + sqr( image_dy( i, j ) ) ) * 4;
-            image_dx(i,j) *= 4;
-            image_dy(i,j) *= 4;
-            //  result( i, j ).r = sqrt( sqr( image_dx( i, j ).r ) + sqr( image_dy( i, j ).r ) ) *
-            //  4;
-            //  result( i, j ).g = sqrt( sqr( image_dx( i, j ).g ) + sqr( image_dy( i, j ).g ) ) *
-            //  4;
-            //  result( i, j ).b = sqrt( sqr( image_dx( i, j ).b ) + sqr( image_dy( i, j ).b ) ) *
-            //  4;
+            result( i, j ) = apply( []( float p1, float p2 ) -> float { return hypot( p1, p2 ); },
+                                    image_dx( i, j ), image_dy( i, j ) );
         }
     }
-    ImageIO::ImageToFile( image_dx, "gradx.bmp" );
-    ImageIO::ImageToFile( image_dy, "grady.bmp" );
     return result;
 }
 
 int main( int argc, char **argv )
 {
-    GrayscaleFloatImage image = ImageIO::FileToGrayscaleFloatImage( argv[1] );
-    GrayscaleFloatImage image5 = Gradient( image, 1.f );
-    /*   for( int j = 0; j < image5.Height(); j += 25 )
-       {
-           for( int i = 0; i < image5.Width(); i += 60 )
-           {
-               printf( "%f ", image5( i, j ) );
-           }
-           printf( "\n" );
-       }*/
-    ImageIO::ImageToFile( image5, "grad.bmp" );
+    ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[1] );
+    GrayscaleFloatImage image5 = ToGrayscale( Gradient( image, 1.f ) );
+    image5.for_each_pixel( []( float x ) { return 4.f * x; } );
+    ImageIO::ImageToFile( image5, argv[2] );
     return 0;
 }

@@ -115,6 +115,16 @@ class ImageBase
 
         return res;
     }
+    void for_each_pixel( PixelType( f )( PixelType ) )
+    {
+        for( int j = 0; j < height; ++j )
+        {
+            for( int i = 0; i < width; ++i )
+            {
+                rawdata[j * width + i] = f( rawdata[j * width + i] );
+            }
+        }
+    }
 };
 
 typedef ImageBase<unsigned char> GrayscaleByteImage;
