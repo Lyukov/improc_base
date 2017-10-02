@@ -1,3 +1,27 @@
+/*
+
+Copyright (c) 2011-2017 Dmitry Lyukov
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+*/
+
 #define _USE_MATH_DEFINES
 
 #include <math.h>
@@ -244,12 +268,18 @@ ImageBase<PixelType> Gradient( const ImageBase<PixelType> &image, float sigma )
     return result;
 }
 
-inline float max( float x1, float x2 ) { return ( x1 > x2 ) ? x1 : x2; }
-inline float max( float x1, float x2, float x3, float x4 )
-{
-    return max( max( x1, x2 ), max( x3, x4 ) );
-}
 inline float abs( float x ) { return ( x > 0 ) ? x : -x; }
+template <typename PixelType>
+PixelType BilinearInterpolate( const ImageBase<PixelType> &image, float a, float b )
+{
+    float i = floorf( a );
+    float j = floorf( b );
+    return image( i, j ) * ( i + 1 - a ) * ( j + 1 - b ) +
+           image( i + 1, j ) * ( a - i ) * ( j + 1 - b ) +
+           image( i, j + 1 ) * ( i + 1 - a ) * ( b - j ) +
+           image( i + 1, j + 1 ) * ( a - i ) * ( b - j );
+}
+
 template <typename PixelType>
 ImageBase<PixelType> Rotate( const ImageBase<PixelType> &image, float angle, bool direction = true )
 {
@@ -309,13 +339,7 @@ ImageBase<PixelType> Rotate( const ImageBase<PixelType> &image, float angle, boo
         {
             float a = cosa * x + sina * y;
             float b = -sina * x + cosa * y;
-            float i = floorf( a );
-            float j = floorf( b );
-            result( x + W / 2, y + H / 2 ) =
-                image( i + w / 2, j + h / 2 ) * ( i + 1 - a ) * ( j + 1 - b ) +
-                image( i + 1 + w / 2, j + h / 2 ) * ( a - i ) * ( j + 1 - b ) +
-                image( i + w / 2, j + 1 + h / 2 ) * ( i + 1 - a ) * ( b - j ) +
-                image( i + 1 + w / 2, j + 1 + h / 2 ) * ( a - i ) * ( b - j );
+            result( x + W / 2, y + H / 2 ) = BilinearInterpolate( image, a + w / 2, b + h / 2 );
         }
     }
     return result;
