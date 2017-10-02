@@ -345,6 +345,28 @@ ImageBase<PixelType> Rotate( const ImageBase<PixelType> &image, float angle, boo
     return result;
 }
 
+template <typename PixelType>
+ImageBase<PixelType> Scale( const ImageBase<PixelType> &image, float x, float y = -1.f )
+{
+    if( y == -1.f )
+        y = x;
+    assert( x > 0 && y > 0 );
+    int W = floorf( image.Width() * x );
+    int H = floorf( image.Height() * y );
+    ImageBase<PixelType> result( W, H );
+    for( int j = 0; j < H; ++j )
+    {
+        for( int i = 0; i < W; ++i )
+        {
+            float a = (float)i / x;
+            float b = (float)j / y;
+            //result( i, j ) = image( a, b );
+            result(i,j) = BilinearInterpolate(image, a, b);
+        }
+    }
+    return result;
+}
+
 int main( int argc, char **argv )
 {
     if( !strcmp( argv[1], "mirror" ) )
@@ -419,6 +441,17 @@ int main( int argc, char **argv )
         float gamma = atof( argv[2] );
         ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[3] );
         ImageIO::ImageToFile( GammaCorrection( image, gamma ), argv[4] );
+    }
+    else if( !strcmp(argv[1], "scale")) {
+        float x = atof(argv[2]);
+        if (argc > 5) {
+            float y = atof(argv[3]);
+            ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[4] );
+            ImageIO::ImageToFile( Scale( image, x, y ), argv[5] );
+        } else {
+            ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[3] );
+            ImageIO::ImageToFile( Scale( image, x ), argv[4] );
+        }
     }
     return 0;
 }
