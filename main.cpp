@@ -198,7 +198,7 @@ ImageBase<PixelType> GaussianFilter( const ImageBase<PixelType> &image,
                                      float sigma = 1.f,
                                      float gamma = 1.f )
 {
-    int win_size = ceil( sigma * 4.f );
+    int win_size = ceilf( sigma * 4.f );
     GrayscaleFloatImage kernel( win_size * 2 + 1, win_size * 2 + 1 );
     for( int j = 0; j < kernel.Height(); ++j )
     {
@@ -220,7 +220,7 @@ ImageBase<PixelType> GaussianFilter( const ImageBase<PixelType> &image,
 template <typename PixelType>
 ImageBase<PixelType> Gradient( const ImageBase<PixelType> &image, float sigma )
 {
-    int win_size = ceil( sigma * 4.f );
+    int win_size = ceilf( sigma * 4.f );
     GrayscaleFloatImage kernelDx( win_size * 2 + 1, win_size * 2 + 1 );
     for( int j = 0; j < kernelDx.Height(); ++j )
     {
@@ -244,6 +244,53 @@ ImageBase<PixelType> Gradient( const ImageBase<PixelType> &image, float sigma )
     return result;
 }
 
+inline float max( float x1, float x2 ) { return ( x1 > x2 ) ? x1 : x2; }
+inline float max( float x1, float x2, float x3, float x4 )
+{
+    return max( max( x1, x2 ), max( x3, x4 ) );
+}
+inline float abs( float x ) { return ( x > 0 ) ? x : -x; }
+template <typename PixelType>
+ImageBase<PixelType> Rotate( const ImageBase<PixelType> &image, float angle, bool direction = true )
+{
+    if( direction == false )
+    {
+        angle = -angle;
+    }
+    angle *= M_PI / 180.f;
+    float sina = sin( angle );
+    float cosa = cos( angle );
+    int h = image.Height();
+    int w = image.Width();
+    int H = ceil( (float)h * abs( cosa ) + (float)w * abs( sina ) );
+    int W = ceil( (float)h * abs( sina ) + (float)w * abs( cosa ) );
+    ImageBase<PixelType> result( W, H );
+    for( int j = -h / 2; j < h / 2; ++j )
+    {
+        for( int i = -w / 2; i < w / 2; ++i )
+        {
+            float x1 = cosa * i - sina * j;
+            float x2 = cosa * ( i + 1 ) - sina * j;
+            float x3 = cosa * i - sina * ( j + 1 );
+            float x4 = cosa * ( i + 1 ) - sina * ( j + 1 );
+            float y1 = sina * i + cosa * j;
+            float y2 = sina * ( i + 1 ) + cosa * j;
+            float y3 = sina * i + cosa * ( j + 1 );
+            float y4 = sina * ( i + 1 ) + cosa * ( j + 1 );
+            int x = floorf( max( x1, x2, x3, x4 ) );
+            int y = floorf( max( y1, y2, y3, y4 ) );
+            float a = cosa * x + sina * y;
+            float b = -sina * x + cosa * y;
+            result( x + W / 2, y + H / 2 ) =
+                image( i + w / 2, j + h / 2 ) * ( i + 1 - a ) * ( j + 1 - b ) +
+                image( i + 1 + w / 2, j + h / 2 ) * ( a - i ) * ( j + 1 - b ) +
+                image( i + w / 2, j + 1 + h / 2 ) * ( i + 1 - a ) * ( b - j ) +
+                image( i + 1 + w / 2, j + 1 + h / 2 ) * ( a - i ) * ( b - j );
+        }
+    }
+    return result;
+}
+
 int main( int argc, char **argv )
 {
     if( !strcmp( argv[1], "mirror" ) )
@@ -255,12 +302,26 @@ int main( int argc, char **argv )
     {
         bool direction;
         if( !strcmp( argv[2], "cw" ) )
+        {
             direction = true;
+        }
         else if( !strcmp( argv[2], "ccw" ) )
+        {
             direction = false;
-        int angle = atoi( argv[3] );
-        ColorByteImage image = ImageIO::FileToColorByteImage( argv[4] );
-        ImageIO::ImageToFile( Rotate( image, angle, direction ), argv[5] );
+        }
+        float angle = atof( argv[3] );
+        if( angle == 90.f || angle == 180.f || angle == 270.f )
+        {
+            ColorByteImage image = ImageIO::FileToColorByteImage( argv[4] );
+            image = Rotate( image, int( angle ), direction );
+            ImageIO::ImageToFile( image, argv[5] );
+        }
+        else
+        {
+            ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[4] );
+            image = Rotate( image, angle, direction );
+            ImageIO::ImageToFile( image, argv[5] );
+        }
     }
     else if( !strcmp( argv[1], "sobel" ) )
     {
