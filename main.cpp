@@ -265,22 +265,52 @@ ImageBase<PixelType> Rotate( const ImageBase<PixelType> &image, float angle, boo
     int H = ceil( (float)h * abs( cosa ) + (float)w * abs( sina ) );
     int W = ceil( (float)h * abs( sina ) + (float)w * abs( cosa ) );
     ImageBase<PixelType> result( W, H );
-    for( int j = -h / 2; j < h / 2; ++j )
+    struct point
     {
-        for( int i = -w / 2; i < w / 2; ++i )
+        float x;
+        float y;
+    };
+    std::vector<point> v( 4 );
+    v[0].x = -cosa * w / 2 + sina * h / 2;
+    v[1].x = cosa * w / 2 + sina * h / 2;
+    v[2].x = -cosa * w / 2 - sina * h / 2;
+    v[3].x = cosa * w / 2 - sina * h / 2;
+    v[0].y = -sina * w / 2 - cosa * h / 2;
+    v[1].y = sina * w / 2 - cosa * h / 2;
+    v[2].y = -sina * w / 2 + cosa * h / 2;
+    v[3].y = sina * w / 2 + cosa * h / 2;
+    std::sort( v.begin(), v.end(), []( const point &p1, const point &p2 ) { return p1.x < p2.x; } );
+    std::sort( v.begin() + 1, v.end() - 1,
+               []( const point &p1, const point &p2 ) { return p1.y < p2.y; } );
+    float c[4];
+    if( abs( sina ) < 1e-6f || abs( cosa ) < 1e-6f )
+    {
+        c[0] = c[1] = c[2] = c[3] = 0.f;
+    }
+    else
+    {
+        c[0] = ( v[1].x - v[0].x ) / ( v[1].y - v[0].y );
+        c[1] = ( v[2].x - v[0].x ) / ( v[2].y - v[0].y );
+        c[2] = ( v[1].x - v[3].x ) / ( v[1].y - v[3].y );
+        c[3] = ( v[2].x - v[3].x ) / ( v[2].y - v[3].y );
+    }
+    for( int y = -H / 2; y < H / 2; ++y )
+    {
+        int l, r;
+        if( y <= v[0].y )
+            l = v[0].x + c[0] * ( y - v[0].y );
+        else
+            l = v[0].x + c[1] * ( y - v[0].y );
+        if( y <= v[3].y )
+            r = v[3].x + c[2] * ( y - v[3].y );
+        else
+            r = v[3].x + c[3] * ( y - v[3].y );
+        for( int x = l; x <= r; ++x )
         {
-            float x1 = cosa * i - sina * j;
-            float x2 = cosa * ( i + 1 ) - sina * j;
-            float x3 = cosa * i - sina * ( j + 1 );
-            float x4 = cosa * ( i + 1 ) - sina * ( j + 1 );
-            float y1 = sina * i + cosa * j;
-            float y2 = sina * ( i + 1 ) + cosa * j;
-            float y3 = sina * i + cosa * ( j + 1 );
-            float y4 = sina * ( i + 1 ) + cosa * ( j + 1 );
-            int x = floorf( max( x1, x2, x3, x4 ) );
-            int y = floorf( max( y1, y2, y3, y4 ) );
             float a = cosa * x + sina * y;
             float b = -sina * x + cosa * y;
+            float i = floorf( a );
+            float j = floorf( b );
             result( x + W / 2, y + H / 2 ) =
                 image( i + w / 2, j + h / 2 ) * ( i + 1 - a ) * ( j + 1 - b ) +
                 image( i + 1 + w / 2, j + h / 2 ) * ( a - i ) * ( j + 1 - b ) +
