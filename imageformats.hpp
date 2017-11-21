@@ -61,7 +61,6 @@ class ImageBase
         {
             return rawdata[y * width + x];
         }
-        // assert(x >= 0 && x < width && y >= 0 && y < height);
         if( x < 0 )
             x = -x;
         else if( x >= width )
@@ -70,7 +69,6 @@ class ImageBase
             y = -y;
         else
             y = height - 1 - ( y - height );
-        ;
         return ( *this )( x, y );
     }
 
@@ -88,7 +86,6 @@ class ImageBase
             y = -y;
         else
             y = height - 1 - ( y - height );
-        ;
         return ( *this )( x, y );
     }
 

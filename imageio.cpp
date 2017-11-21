@@ -414,13 +414,17 @@ ColorByteImage ImageIO::FileToColorByteImage( const char *filename )
 {
     std::fstream f( filename, std::ios::in | std::ios::binary );
 
-    if( !f.is_open() )
+    if( !f.is_open() ) {
+        printf("Not open\n");
         return ColorByteImage( 0, 0 );
+    }
 
     BITMAPFILEHEADER header;
     f.read( (char *)&header, sizeof( BITMAPFILEHEADER ) );
-    if( header.bfType != 0x4D42 )
+    if( header.bfType != 0x4D42 ) {
+        printf("Incorrecet bfType\n");
         return ColorByteImage( 0, 0 );
+    }
 
     int32_t size;
     f.read( (char *)&size, sizeof( int32_t ) );
@@ -431,10 +435,11 @@ ColorByteImage ImageIO::FileToColorByteImage( const char *filename )
     {
         BITMAPCOREHEADER info;
         info.bcSize = size;
-        bitCount = info.bcBitCount;
         f.read( (char *)&info + sizeof( int32_t ), sizeof( BITMAPCOREHEADER ) - sizeof( int32_t ) );
+        bitCount = info.bcBitCount;
         if( info.bcPlanes != 1 )
         {
+            printf("Incorrect bcPlanes\n");
             return ColorByteImage( 0, 0 );
         }
 
@@ -449,6 +454,7 @@ ColorByteImage ImageIO::FileToColorByteImage( const char *filename )
         bitCount = info.biBitCount;
         if( info.biPlanes != 1 || info.biCompression != 0 )
         {
+            printf("Incorrect biPlanes or biCompression\n");
             return ColorByteImage( 0, 0 );
         }
 
@@ -457,6 +463,7 @@ ColorByteImage ImageIO::FileToColorByteImage( const char *filename )
     }
     else
     {
+        printf("Unsupported format\n");
         return ColorByteImage( 0, 0 );
     }
 
@@ -467,7 +474,7 @@ ColorByteImage ImageIO::FileToColorByteImage( const char *filename )
     {
         stride = ( width * 3 + 3 ) & 0xFFFFFFFC;
     }
-    else if( bitCount == 32 )
+    else /*if( bitCount == 32 )*/
     {
         stride = width * 4;
     }

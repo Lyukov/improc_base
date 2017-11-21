@@ -49,6 +49,7 @@ struct ColorFloatPixel
         : b( b ), g( g ), r( r ), a( a )
     {
     }
+    inline ColorFloatPixel( const ColorBytePixel &p ) : b( p.b ), g( p.g ), r( p.r ), a( p.a ) {}
 
     inline ColorFloatPixel &operator+=( const ColorFloatPixel &other )
     {
@@ -73,6 +74,7 @@ struct ColorFloatPixel
         return ColorFloatPixel( b * q, g * q, r * q, a * q );
     }
     float toGray() const { return b * 0.114f + g * 0.587f + r * 0.299f; }
+    inline operator ColorBytePixel() const { return ColorBytePixel( b, g, r, a ); }
 };
 
 
