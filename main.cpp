@@ -32,7 +32,7 @@ double PSNR( const ColorFloatImage& image1, const ColorFloatImage& image2 )
     assert( image1.Height() == image2.Height() && image1.Width() == image2.Width() );
     double mse = MSE( image1, image2 );
     double S = 255.0;
-    return 10.0 * log( S * S / mse );
+    return 10.0 * log10( S * S / mse );
 }
 
 // Mean value of a part of the image
