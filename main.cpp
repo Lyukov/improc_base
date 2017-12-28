@@ -19,7 +19,7 @@ double MSE( const ColorFloatImage& image1, const ColorFloatImage& image2 )
         for( int i = 0; i < image1.Width(); ++i )
         {
             ColorFloatPixel diff = image1( i, j ) - image2( i, j );
-            sum += diff.r * diff.r + diff.g * diff.g + diff.b * diff.b;
+            sum += sqr( diff.r ) + sqr( diff.g ) + sqr( diff.b );
         }
     }
     sum /= image1.Height() * image1.Width();
@@ -81,7 +81,7 @@ double StandardDerivation( const ColorFloatImage& image,
         for( int i = x1; i < x2; ++i )
         {
             ColorFloatPixel diff = image( i, j ) - mean;
-            sigma += diff.r * diff.r + diff.g * diff.g + diff.b * diff.b;
+            sigma += sqr( diff.r ) + sqr( diff.g ) + sqr( diff.b );
         }
     }
     const int N = ( x2 - x1 ) * ( y2 - y1 );
@@ -156,8 +156,8 @@ double SSIM( const ColorFloatImage& image1,
     const double c2 = ( 0.03 * 255 ) * ( 0.03 * 255 );
 
     double m1_m2 = mean1.r * mean2.r + mean1.g * mean2.g + mean1.b * mean2.b;
-    double m1_sqr = mean1.r * mean1.r + mean1.g * mean1.g + mean1.b * mean1.b;
-    double m2_sqr = mean2.r * mean2.r + mean2.g * mean2.g + mean2.b * mean2.b;
+    double m1_sqr = sqr( mean1.r ) + sqr( mean1.g ) + sqr( mean1.b );
+    double m2_sqr = sqr( mean2.r ) + sqr( mean2.g ) + sqr( mean2.b );
     double ssim = ( ( 2 * m1_m2 + c1 ) * ( 2 * covariance + c2 ) ) /
                   ( ( m1_sqr + m2_sqr + c1 ) * ( sigma1 * sigma1 + sigma2 * sigma2 + c2 ) );
     return ssim;
@@ -255,8 +255,8 @@ GrayscaleFloatImage Canny( const ColorFloatImage& image,
             }
         }
     }
-    ImageIO::ImageToFile( preserved, "nonmax.bmp" );
 
+    // Thresholding
     for( int j = 0; j < preserved.Height(); ++j )
     {
         for( int i = 0; i < preserved.Width(); ++i )
@@ -271,7 +271,44 @@ GrayscaleFloatImage Canny( const ColorFloatImage& image,
             }
         }
     }
-    ImageIO::ImageToFile( preserved, "nonmax0.bmp" );
+    return preserved;
+}
+
+float GaborFunction( float x,
+                     float y,
+                     float sigma,
+                     float gamma,
+                     float theta,
+                     float lambda,
+                     float psi )
+{
+    float x1 = x * cos( theta ) + y * sin( theta );
+    float y1 = -x * sin( theta ) + y * cos( theta );
+    return exp( -( sqr( x1 ) + sqr( gamma * y1 ) ) / ( 2.0 * sqr( sigma ) ) ) *
+           cos( 2.0 * M_PI * x1 / lambda + psi );
+}
+
+template <typename PixelType>
+ImageBase<PixelType> GaborFilter( const ImageBase<PixelType>& image,
+                                  float sigma,
+                                  float gamma,
+                                  float theta,
+                                  float lambda,
+                                  float psi )
+{
+    int win_size = ceilf( sigma * 5.f );
+    GrayscaleFloatImage kernel( win_size * 2 + 1, win_size * 2 + 1 );
+    for( int j = 0; j < kernel.Height(); ++j )
+    {
+        for( int i = 0; i < kernel.Width(); ++i )
+        {
+            kernel( i, j ) =
+                GaborFunction( i - win_size, j - win_size, sigma, gamma, theta, lambda, psi );
+        }
+    }
+    ImageBase<PixelType> result = Convolution( image, kernel );
+   // result.for_each_pixel( []( PixelType p ) { return p * 0.5f + PixelType( 128 ); } );
+    return result;
 }
 
 int main( int argc, char** argv )
@@ -335,15 +372,31 @@ int main( int argc, char** argv )
     }
     else if( !strcmp( argv[1], "canny" ) )
     {
-        if( argc < 6 )
+        if( argc < 7 )
         {
             std::cout << "Bad command" << std::endl;
         }
-        ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[2] );
-        float sigma = atof( argv[3] );
-        float thr_high = atof( argv[4] );
-        float thr_low = atof( argv[5] );
-        Canny( image, sigma, thr_high, thr_low );
+        float sigma = atof( argv[2] );
+        float thr_high = atof( argv[3] );
+        float thr_low = atof( argv[4] );
+        ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[5] );
+        GrayscaleFloatImage canny = Canny( image, sigma, thr_high, thr_low );
+        ImageIO::ImageToFile( canny, argv[6] );
+    }
+    else if( !strcmp( argv[1], "gabor" ) )
+    {
+        if( argc < 9 )
+        {
+            std::cout << "Bad command" << std::endl;
+        }
+        float sigma = atof( argv[2] );
+        float gamma = atof( argv[3] );
+        float theta = atof( argv[4] );
+        float lambda = atof( argv[5] );
+        float psi = atof( argv[6] );
+        GrayscaleFloatImage image = ImageIO::FileToGrayscaleFloatImage( argv[7] );
+        GrayscaleFloatImage gabor = GaborFilter( image, sigma, gamma, theta, lambda, psi );
+        ImageIO::ImageToFile( gabor, argv[8] );
     }
     return 0;
 }
