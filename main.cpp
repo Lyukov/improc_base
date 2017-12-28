@@ -1,7 +1,6 @@
-#include "../Task1/imageformats.hpp"
-#include "../Task1/imageio.cpp"
-#include "../Task1/imageio.hpp"
-#include "../Task1/pixelformats.hpp"
+#include "imageformats.hpp"
+#include "imageio.hpp"
+#include "task1.hpp"
 
 #include <string.h>
 #include <cmath>
@@ -153,8 +152,8 @@ double SSIM( const ColorFloatImage& image1,
     double sigma2 = StandardDerivation( image2, mean2, x1, x2, y1, y2 );
     double covariance = Covariance( image1, image2, mean1, mean2, x1, x2, y1, y2 );
 
-    const double c1 = (0.01 * 255) * (0.01 * 255);
-    const double c2 = (0.03 * 255) * (0.03 * 255);
+    const double c1 = ( 0.01 * 255 ) * ( 0.01 * 255 );
+    const double c2 = ( 0.03 * 255 ) * ( 0.03 * 255 );
 
     double m1_m2 = mean1.r * mean2.r + mean1.g * mean2.g + mean1.b * mean2.b;
     double m1_sqr = mean1.r * mean1.r + mean1.g * mean1.g + mean1.b * mean1.b;
@@ -183,6 +182,96 @@ double MSSIM( const ColorFloatImage& image1, const ColorFloatImage& image2 )
 }
 
 // end of namespace
+}
+
+GrayscaleFloatImage Canny( const ColorFloatImage& image,
+                           float sigma,
+                           float thr_high,
+                           float thr_low )
+{
+    int win_size = ceilf( sigma * 3.f );
+    GrayscaleFloatImage kernelDx( win_size * 2 + 1, win_size * 2 + 1 );
+    for( int j = 0; j < kernelDx.Height(); ++j )
+    {
+        for( int i = 0; i < kernelDx.Width(); ++i )
+        {
+            kernelDx( i, j ) = GaussDx( i - win_size, j - win_size, sigma );
+        }
+    }
+    GrayscaleFloatImage kernelDy = Mirror( Rotate( kernelDx, 90, true ), 'x' );  // Transpose
+    GrayscaleFloatImage image_dx = ToGrayscale( Convolution( image, kernelDx ) );
+    GrayscaleFloatImage image_dy = ToGrayscale( Convolution( image, kernelDy ) );
+    GrayscaleFloatImage gradient( image.Width(), image.Height() );
+    GrayscaleFloatImage gradient_direction( image.Width(), image.Height() );
+    for( int j = 0; j < image.Height(); ++j )
+    {
+        for( int i = 0; i < image.Width(); ++i )
+        {
+            gradient( i, j ) = hypot( image_dy( i, j ), image_dx( i, j ) );
+            gradient_direction( i, j ) = atan2( image_dy( i, j ), image_dx( i, j ) );
+        }
+    }
+
+    // Non-maximum suppression
+    GrayscaleFloatImage preserved( image.Width(), image.Height() );
+    for( int j = 0; j < image.Height(); ++j )
+    {
+        for( int i = 0; i < image.Width(); ++i )
+        {
+            float direction = gradient_direction( i, j ) * 180.0 / M_PI;
+            if( direction < 0 )
+            {
+                direction += 180.0;
+            }
+            float grad1, grad2;
+            if( direction <= 22.5 || direction >= 157.5 )
+            {
+                grad1 = gradient( i - 1, j );
+                grad2 = gradient( i + 1, j );
+            }
+            else if( direction <= 67.5 )
+            {
+                grad1 = gradient( i + 1, j + 1 );
+                grad2 = gradient( i - 1, j - 1 );
+            }
+            else if( direction <= 112.5 )
+            {
+                grad1 = gradient( i, j + 1 );
+                grad2 = gradient( i, j - 1 );
+            }
+            else
+            {
+                grad1 = gradient( i + 1, j - 1 );
+                grad2 = gradient( i - 1, j + 1 );
+            }
+            float grad = gradient( i, j );
+            if( grad > grad1 && grad > grad2 )
+            {
+                preserved( i, j ) = grad;
+            }
+            else
+            {
+                preserved( i, j ) = 0.0;
+            }
+        }
+    }
+    ImageIO::ImageToFile( preserved, "nonmax.bmp" );
+
+    for( int j = 0; j < preserved.Height(); ++j )
+    {
+        for( int i = 0; i < preserved.Width(); ++i )
+        {
+            if( preserved( i, j ) >= thr_low && preserved( i, j ) <= thr_high )
+            {
+                preserved( i, j ) = 255.0;
+            }
+            else
+            {
+                preserved( i, j ) = 0.0;
+            }
+        }
+    }
+    ImageIO::ImageToFile( preserved, "nonmax0.bmp" );
 }
 
 int main( int argc, char** argv )
@@ -243,6 +332,18 @@ int main( int argc, char** argv )
         std::cout << "PSNR  = " << Metrics::PSNR( image1, image2 ) << std::endl;
         std::cout << "SSIM  = " << Metrics::SSIM( image1, image2 ) << std::endl;
         std::cout << "MSSIM = " << Metrics::MSSIM( image1, image2 ) << std::endl;
+    }
+    else if( !strcmp( argv[1], "canny" ) )
+    {
+        if( argc < 6 )
+        {
+            std::cout << "Bad command" << std::endl;
+        }
+        ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[2] );
+        float sigma = atof( argv[3] );
+        float thr_high = atof( argv[4] );
+        float thr_low = atof( argv[5] );
+        Canny( image, sigma, thr_high, thr_low );
     }
     return 0;
 }
