@@ -5,6 +5,7 @@
 #include <string.h>
 #include <cmath>
 #include <iostream>
+#include <queue>
 
 namespace Metrics
 {
@@ -184,10 +185,10 @@ double MSSIM( const ColorFloatImage& image1, const ColorFloatImage& image2 )
 // end of namespace
 }
 
-GrayscaleFloatImage Canny( const ColorFloatImage& image,
-                           float sigma,
-                           float thr_high,
-                           float thr_low )
+GrayscaleByteImage Canny( const GrayscaleFloatImage& image,
+                          float sigma,
+                          float thr_high,
+                          float thr_low )
 {
     int win_size = ceilf( sigma * 3.f );
     GrayscaleFloatImage kernelDx( win_size * 2 + 1, win_size * 2 + 1 );
@@ -199,15 +200,20 @@ GrayscaleFloatImage Canny( const ColorFloatImage& image,
         }
     }
     GrayscaleFloatImage kernelDy = Mirror( Rotate( kernelDx, 90, true ), 'x' );  // Transpose
-    GrayscaleFloatImage image_dx = ToGrayscale( Convolution( image, kernelDx ) );
-    GrayscaleFloatImage image_dy = ToGrayscale( Convolution( image, kernelDy ) );
+    GrayscaleFloatImage image_dx = Convolution( image, kernelDx );
+    GrayscaleFloatImage image_dy = Convolution( image, kernelDy );
     GrayscaleFloatImage gradient( image.Width(), image.Height() );
     GrayscaleFloatImage gradient_direction( image.Width(), image.Height() );
+    float max_gradient = 0.0f;
     for( int j = 0; j < image.Height(); ++j )
     {
         for( int i = 0; i < image.Width(); ++i )
         {
             gradient( i, j ) = hypot( image_dy( i, j ), image_dx( i, j ) );
+            if( gradient( i, j ) > max_gradient )
+            {
+                max_gradient = gradient( i, j );
+            }
             gradient_direction( i, j ) = atan2( image_dy( i, j ), image_dx( i, j ) );
         }
     }
@@ -257,21 +263,58 @@ GrayscaleFloatImage Canny( const ColorFloatImage& image,
     }
 
     // Thresholding
+    GrayscaleByteImage thresholded( image.Width(), image.Height() );
+    std::queue<std::pair<int, int> > Q;
+    const unsigned char WEAK = 127;
+    const unsigned char STRONG = 255;
     for( int j = 0; j < preserved.Height(); ++j )
     {
         for( int i = 0; i < preserved.Width(); ++i )
         {
-            if( preserved( i, j ) >= thr_low && preserved( i, j ) <= thr_high )
+            if( preserved( i, j ) < thr_low * max_gradient )
             {
-                preserved( i, j ) = 255.0;
+                thresholded( i, j ) = 0;
+            }
+            else if( preserved( i, j ) < thr_high * max_gradient )
+            {
+                thresholded( i, j ) = WEAK;
             }
             else
             {
-                preserved( i, j ) = 0.0;
+                thresholded( i, j ) = STRONG;
+                Q.push( std::pair<int, int>( i, j ) );
             }
         }
     }
-    return preserved;
+    // Hysteresis
+    int movedir[8][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
+    while( !Q.empty() )
+    {
+        int x = Q.front().first;
+        int y = Q.front().second;
+        Q.pop();
+        for( int k = 0; k < 8; ++k )
+        {
+            int i = x + movedir[k][0];
+            int j = y + movedir[k][1];
+            if( thresholded( i, j ) == WEAK )
+            {
+                thresholded( i, j ) = STRONG;
+                Q.push( std::pair<int, int>( i, j ) );
+            }
+        }
+    }
+   for( int j = 0; j < thresholded.Height(); ++j )
+    {
+        for( int i = 0; i < thresholded.Width(); ++i )
+        {
+            if( thresholded( i, j ) == WEAK )
+            {
+                thresholded( i, j ) = 0;
+            }
+        }
+    }
+    return thresholded;
 }
 
 float GaborFunction( float x,
@@ -307,7 +350,7 @@ ImageBase<PixelType> GaborFilter( const ImageBase<PixelType>& image,
         }
     }
     ImageBase<PixelType> result = Convolution( image, kernel );
-   // result.for_each_pixel( []( PixelType p ) { return p * 0.5f + PixelType( 128 ); } );
+    //  result.for_each_pixel( []( PixelType p ) { return p * 0.5f + PixelType( 128 ); } );
     return result;
 }
 
@@ -316,12 +359,14 @@ int main( int argc, char** argv )
     if( argc < 2 )
     {
         std::cout << "Bad command" << std::endl;
+        return -1;
     }
     if( !strcmp( argv[1], "mse" ) )
     {
         if( argc < 4 )
         {
             std::cout << "Bad command" << std::endl;
+            return -1;
         }
         ColorFloatImage image1 = ImageIO::FileToColorFloatImage( argv[2] );
         ColorFloatImage image2 = ImageIO::FileToColorFloatImage( argv[3] );
@@ -332,6 +377,7 @@ int main( int argc, char** argv )
         if( argc < 4 )
         {
             std::cout << "Bad command" << std::endl;
+            return -1;
         }
         ColorFloatImage image1 = ImageIO::FileToColorFloatImage( argv[2] );
         ColorFloatImage image2 = ImageIO::FileToColorFloatImage( argv[3] );
@@ -342,6 +388,7 @@ int main( int argc, char** argv )
         if( argc < 4 )
         {
             std::cout << "Bad command" << std::endl;
+            return -1;
         }
         ColorFloatImage image1 = ImageIO::FileToColorFloatImage( argv[2] );
         ColorFloatImage image2 = ImageIO::FileToColorFloatImage( argv[3] );
@@ -352,6 +399,7 @@ int main( int argc, char** argv )
         if( argc < 4 )
         {
             std::cout << "Bad command" << std::endl;
+            return -1;
         }
         ColorFloatImage image1 = ImageIO::FileToColorFloatImage( argv[2] );
         ColorFloatImage image2 = ImageIO::FileToColorFloatImage( argv[3] );
@@ -362,6 +410,7 @@ int main( int argc, char** argv )
         if( argc < 4 )
         {
             std::cout << "Bad command" << std::endl;
+            return -1;
         }
         ColorFloatImage image1 = ImageIO::FileToColorFloatImage( argv[2] );
         ColorFloatImage image2 = ImageIO::FileToColorFloatImage( argv[3] );
@@ -375,12 +424,13 @@ int main( int argc, char** argv )
         if( argc < 7 )
         {
             std::cout << "Bad command" << std::endl;
+            return -1;
         }
         float sigma = atof( argv[2] );
         float thr_high = atof( argv[3] );
         float thr_low = atof( argv[4] );
-        ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[5] );
-        GrayscaleFloatImage canny = Canny( image, sigma, thr_high, thr_low );
+        GrayscaleFloatImage image = ImageIO::FileToGrayscaleFloatImage( argv[5] );
+        GrayscaleByteImage canny = Canny( image, sigma, thr_high, thr_low );
         ImageIO::ImageToFile( canny, argv[6] );
     }
     else if( !strcmp( argv[1], "gabor" ) )
@@ -388,10 +438,12 @@ int main( int argc, char** argv )
         if( argc < 9 )
         {
             std::cout << "Bad command" << std::endl;
+            return -1;
         }
         float sigma = atof( argv[2] );
         float gamma = atof( argv[3] );
         float theta = atof( argv[4] );
+        theta *= M_PI / 180.f;
         float lambda = atof( argv[5] );
         float psi = atof( argv[6] );
         GrayscaleFloatImage image = ImageIO::FileToGrayscaleFloatImage( argv[7] );
