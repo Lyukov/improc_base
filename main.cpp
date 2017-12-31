@@ -304,7 +304,7 @@ GrayscaleByteImage Canny( const GrayscaleFloatImage& image,
             }
         }
     }
-   for( int j = 0; j < thresholded.Height(); ++j )
+    for( int j = 0; j < thresholded.Height(); ++j )
     {
         for( int i = 0; i < thresholded.Width(); ++i )
         {
@@ -315,6 +315,57 @@ GrayscaleByteImage Canny( const GrayscaleFloatImage& image,
         }
     }
     return thresholded;
+}
+
+ColorFloatImage BilateralFilter( const ColorFloatImage& image,
+                                 float sigma_d = 1.f,
+                                 float sigma_r = 1.f )
+{
+    int win_size = ceilf( sigma_d * 3.f );
+    GrayscaleFloatImage kernel( win_size * 2 + 1, win_size * 2 + 1 );
+    for( int j = 0; j < kernel.Height(); ++j )
+    {
+        for( int i = 0; i < kernel.Width(); ++i )
+        {
+            kernel( i, j ) =
+                exp( -( sqr( i - win_size ) + sqr( j - win_size ) ) / ( 2.0 * sqr( sigma_d ) ) );
+        }
+    }
+    if( sigma_d == 0.f )
+    {
+        kernel( 0, 0 ) = 1.f;
+    }
+
+    ColorFloatImage result( image.Width(), image.Height() );
+    int kerw = kernel.Width();
+    int kerh = kernel.Height();
+    for( int j = 0; j < result.Height(); ++j )
+    {
+        for( int i = 0; i < result.Width(); ++i )
+        {
+            ColorFloatPixel sum( 0 );
+            ColorFloatPixel res( 0 );
+            for( int l = -kerh / 2; l <= kerh / 2; ++l )
+            {
+                for( int k = -kerw / 2; k <= kerw / 2; ++k )
+                {
+                    ColorFloatPixel diff = image( i, j ) - image( i - k, j - l );
+                    ColorFloatPixel coef;
+                    coef.r = exp( -sqr( diff.r ) / ( 2.0 * sqr( sigma_r ) ) );
+                    coef.g = exp( -sqr( diff.g ) / ( 2.0 * sqr( sigma_r ) ) );
+                    coef.b = exp( -sqr( diff.b ) / ( 2.0 * sqr( sigma_r ) ) );
+                    coef = coef * kernel( k + kerw / 2, l + kerw / 2 );
+                    res += image( i - k, j - l ) * coef;
+                    sum += coef;
+                }
+            }
+            res.r /= sum.r;
+            res.g /= sum.g;
+            res.b /= sum.b;
+            result( i, j ) = res;
+        }
+    }
+    return result;
 }
 
 float GaborFunction( float x,
@@ -449,6 +500,19 @@ int main( int argc, char** argv )
         GrayscaleFloatImage image = ImageIO::FileToGrayscaleFloatImage( argv[7] );
         GrayscaleFloatImage gabor = GaborFilter( image, sigma, gamma, theta, lambda, psi );
         ImageIO::ImageToFile( gabor, argv[8] );
+    }
+    else if( !strcmp( argv[1], "bilateral" ) )
+    {
+        if( argc < 6 )
+        {
+            std::cout << "Bad command" << std::endl;
+            return -1;
+        }
+        float sigma_d = atof( argv[2] );
+        float sigma_r = atof( argv[3] );
+        ColorFloatImage image = ImageIO::FileToColorFloatImage( argv[4] );
+        ColorFloatImage result = BilateralFilter( image, sigma_d, sigma_r );
+        ImageIO::ImageToFile( result, argv[5] );
     }
     return 0;
 }
