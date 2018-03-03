@@ -66,10 +66,6 @@ ImageBase<PixelType> Rotate( const ImageBase<PixelType> &image,
         angle = 360 - angle;
     }
     angle %= 360;
-    if( angle == 0 )
-    {
-        return image.Copy();
-    }
     int width = ( angle == 0 || angle == 180 ) ? image.Width() : image.Height();
     int height = ( angle == 0 || angle == 180 ) ? image.Height() : image.Width();
     ImageBase<PixelType> result = ImageBase<PixelType>( width, height );
@@ -89,6 +85,8 @@ ImageBase<PixelType> Rotate( const ImageBase<PixelType> &image,
             case 270:
                 pixel = image( height - j - 1, i );
                 break;
+            default:
+                pixel = image( i, j );
             }
             result( i, j ) = pixel;
         }

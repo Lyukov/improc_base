@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2011-2017 Andrey Nasonov, Dmitry Lyukov
+Copyright (c) 2011-2017 Andrey Nasonov
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -64,6 +64,10 @@ struct ColorFloatPixel
     {
         return ColorFloatPixel( b + other.b, g + other.g, r + other.r, a + other.a );
     }
+    inline ColorFloatPixel operator-( const ColorFloatPixel &other ) const
+    {
+        return ColorFloatPixel( b - other.b, g - other.g, r - other.r, a - other.a );
+    }
     inline ColorFloatPixel operator*( const ColorFloatPixel &other ) const
     {
         return ColorFloatPixel( b * other.b, g * other.g, r * other.r, a * other.a );
@@ -73,7 +77,7 @@ struct ColorFloatPixel
     {
         return ColorFloatPixel( b * q, g * q, r * q, a * q );
     }
-    float toGray() const { return b * 0.114f + g * 0.587f + r * 0.299f; }
+    inline float toGray() const { return b * 0.114f + g * 0.587f + r * 0.299f; }
     inline operator ColorBytePixel() const { return ColorBytePixel( b, g, r, a ); }
 };
 
